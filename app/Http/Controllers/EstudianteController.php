@@ -107,4 +107,92 @@ class EstudianteController extends Controller
 
         return response()->json(['message' => 'Estudiante eliminado correctamente'], 201);
     }
+    // Método para manejar el servicio SOAP
+    public function soapServer()
+{
+    header("Content-Type: text/xml; charset=utf-8");
+
+    $options = [
+        'uri' => url('/soap'),
+    ];
+
+    $server = new \SoapServer(null, $options);
+    $server->setClass(self::class); 
+    $server->handle();
+}
+
+
+
+    // Función SOAP para obtener todos los estudiantes
+    public function getEstudiantes()
+    {
+        return Estudiante::all()->toArray();
+    }
+
+    // Función SOAP para obtener un estudiante por ID
+    public function getEstudianteById($id)
+    {
+        $estudiante = Estudiante::find($id);
+        return $estudiante ? $estudiante->toArray() : null;
+    }
+    // Crear un estudiante vía SOAP
+public function createEstudiante($name, $cedula, $correo, $paralelos_id)
+{
+    $existsCedula = Estudiante::where('cedula', $cedula)->exists();
+    $existsCorreo = Estudiante::where('correo', $correo)->exists();
+
+    if ($existsCedula || $existsCorreo) {
+        throw new \SoapFault("Server", "El estudiante con esa cédula o correo ya existe.");
+    }
+
+    $estudiante = Estudiante::create([
+        'name' => $name,
+        'cedula' => $cedula,
+        'correo' => $correo,
+        'paralelos_id' => $paralelos_id
+    ]);
+
+    return $estudiante->toArray();
+}
+
+// Actualizar un estudiante vía SOAP
+public function updateEstudiante($id, $name = null, $cedula = null, $correo = null, $paralelos_id = null)
+{
+    $estudiante = Estudiante::find($id);
+    if (!$estudiante) {
+        throw new \SoapFault("Server", "Estudiante no encontrado con ID $id");
+    }
+
+    // Validaciones básicas
+    if ($cedula && Estudiante::where('cedula', $cedula)->where('id', '!=', $id)->exists()) {
+        throw new \SoapFault("Server", "La cédula ya está en uso.");
+    }
+    if ($correo && Estudiante::where('correo', $correo)->where('id', '!=', $id)->exists()) {
+        throw new \SoapFault("Server", "El correo ya está en uso.");
+    }
+
+    // Actualizar solo si vienen parámetros
+    $estudiante->name = $name ?? $estudiante->name;
+    $estudiante->cedula = $cedula ?? $estudiante->cedula;
+    $estudiante->correo = $correo ?? $estudiante->correo;
+    $estudiante->paralelos_id = $paralelos_id ?? $estudiante->paralelos_id;
+
+    $estudiante->save();
+
+    return $estudiante->toArray();
+}
+
+// Eliminar un estudiante vía SOAP
+public function deleteEstudiante($id)
+{
+    $estudiante = Estudiante::find($id);
+    if (!$estudiante) {
+        throw new \SoapFault("Server", "Estudiante no encontrado con ID $id");
+    }
+    $estudiante->delete();
+
+    return ['message' => "Estudiante con ID $id eliminado correctamente."];
+}
+
+
 }
