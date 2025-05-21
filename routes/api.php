@@ -24,3 +24,5 @@ Route::prefix('student')->group(function(){
     Route::put('/update/{id}',[EstudianteController::class,'update']);
     Route::delete('/delete/{id}',[EstudianteController::class,'destroy']);
 });
+
+Route::post('/soap', [EstudianteController::class, 'soapServer']);
